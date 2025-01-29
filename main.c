@@ -29,6 +29,7 @@ void move_car(my_car *car, barrier barriers[], moves target);
 void generate_barriers(barrier barriers[]);
 int is_car_touch_barrier(my_car *car, barrier barriers[]);
 
+
 void generate_barriers(barrier barriers[]) {
     srand(time(NULL)); // Seed the random number generator
     for (int i = 0; i < NUM_BARRIERS; i++) {
@@ -39,11 +40,10 @@ void generate_barriers(barrier barriers[]) {
 int is_car_touch_barrier(my_car *car, barrier barriers[]) {
      moves parts[4] = {car->left_back, car->right_back, car->center_back, car->center_front};
 
+     for(int p = 0; p < 4; p++)
+        if (parts[p].x < 0 || parts[p].x >= ROW || parts[p].y < 0 || parts[p].y >= COLUMN)
+                return 1;
      for(int p = 0; p < 4; p++){
-         //Check bounday before checking barrier
-         if (parts[p].x < 0 || parts[p].x >= ROW || parts[p].y < 0 || parts[p].y >= COLUMN) {
-                continue; // Out of bounds, skip to next step
-            }
          for (int b = 0; b < NUM_BARRIERS; b++) {
              if (barriers[b].x == parts[p].x && barriers[b].y == parts[p].y) {
                  return 1; // Path is blocked by a barrier
@@ -54,70 +54,94 @@ int is_car_touch_barrier(my_car *car, barrier barriers[]) {
 }
 
 void move_car(my_car *car, barrier barriers[], moves target) {
-    moves direction;
+    static int direction_tried[3];
+    static int is_reversing;
+    moves direction = {0,0};
 
-   
-    if (car->center_front.x == target.x && car->center_front.y == target.y)
-        return; //reached target
-    int original_direction_x;
-    int original_direction_y;
-
-
-
-        // Path is clear, try to move towards the bottom right corner
-        if (car->center_front.x < target.x) {
-            direction.x = 1;
-        } else if (car->center_front.x > target.x){
-            direction.x = -1;
-        } else {
-            direction.x = 0;
-        }
-
-        if (car->center_front.y < target.y) {
-            direction.y = 1;
-        } else if(car->center_front.y > target.y){
-            direction.y = -1;
-        }
-        else{
-            direction.y =0;
-        }
-        original_direction_x = direction.x;
-        original_direction_y = direction.y;
-
-    if (is_car_touch_barrier(car, barriers)) {
-        //collision detected
-        direction.x=0;
-        direction.y= -1; //turn left
-        if(is_car_touch_barrier(car, barriers)){
-            direction.y = 1; //turn right
-            if(is_car_touch_barrier(car,barriers)){
-                //cornered reverse
-                direction.x = -original_direction_x;
-                direction.y = -original_direction_y;
-            }
-        }
+    if (car->center_front.x == target.x && car->center_front.y == target.y){
+        is_reversing = 0;
+        for (int i=0;i<3;i++)
+        direction_tried[i] = 0;
+        return; // reached target
+    }
+    int original_direction_x = 0;
+    int original_direction_y = 0;
+    int collision_detected=0;
     
-    } else {
-         if (car->center_front.x < target.x) {
-            direction.x = 1;
-        } else if (car->center_front.x > target.x){
-            direction.x = -1;
-        } else {
-            direction.x = 0;
-        }
 
-        if (car->center_front.y < target.y) {
-            direction.y = 1;
-        } else if(car->center_front.y > target.y){
-            direction.y = -1;
-        }
-        else{
-            direction.y =0;
-        }
+    // Randomly choose a direction towards the target
+    int random_choice = rand() % 3; // 0, 1, or 2
+    switch (random_choice) {
+        case 0: // Move towards x-axis first
+            if (car->center_front.x < target.x) {
+                direction.x = 1;
+            } else if (car->center_front.x > target.x) {
+                direction.x = -1;
+            }
+            break;
+        case 1: // Move towards y-axis first
+            if (car->center_front.y < target.y) {
+                direction.y = 1;
+            } else if (car->center_front.y > target.y) {
+                direction.y = -1;
+            }
+            break;
+        case 2: // Move diagonally or stay on same axis
+            if (car->center_front.x < target.x) {
+                direction.x = 1;
+            } else if (car->center_front.x > target.x) {
+                direction.x = -1;
+            }
+              if (car->center_front.y < target.y) {
+                direction.y = 1;
+            } else if(car->center_front.y > target.y){
+                direction.y = -1;
+            }
+            break;
+    }
 
+    original_direction_x = direction.x;
+    original_direction_y = direction.y;
+
+     collision_detected = is_car_touch_barrier(car, barriers);
+     if(collision_detected){
+        
+        int choice = rand()%3;
+        int count = 0;
+        while(count <3){
+             if(direction_tried[choice] == 0){
+                direction_tried[choice] = 1;
+                if(choice == 0){//left
+                    direction.x = -original_direction_y;
+                    direction.y = original_direction_x;
+                }else if (choice ==1){ //right
+                   direction.x = original_direction_y;
+                    direction.y = -original_direction_x;
+                }else{//reverse
+                   direction.x = -original_direction_x;
+                    direction.y = -original_direction_y;
+                    is_reversing=1;
+                }
+                //collision again
+                if(!is_car_touch_barrier(car, barriers))
+                     break;
+                
+             }
+             count++;
+             choice = (choice+1)%3;
+        }
+        //if all choices have been tried reverse the direction
+        if(count >=3){
+            direction.x = -original_direction_x;
+            direction.y = -original_direction_y;
+            is_reversing=1;
+             for (int i=0;i<3;i++)
+                direction_tried[i] = 0;
+
+        }
     }
     // Calculate new positions based on direction
-    moves new_left_back = {car->left_back.x + direction.x, car->left_back.y + direction.y};
+    moves new_left_back = {car->left_back.x + direction.x, car->left_back.y + direction.y}; 
     moves new_right_back = {car->right_back.x + direction.x, car->right_back.y + direction.y};
     moves new_center_back = {car->center_back.x + direction.x, car->center_back.y + direction.y};
     moves new_center_front = {car->center_front.x + direction.x, car->center_front.y + direction.y};
@@ -127,10 +151,13 @@ void move_car(my_car *car, barrier barriers[], moves target) {
         new_right_back.x < 0 || new_right_back.x >= ROW || new_right_back.y < 0 || new_right_back.y >= COLUMN ||
         new_center_back.x < 0 || new_center_back.x >= ROW || new_center_back.y < 0 || new_center_back.y >= COLUMN ||
         new_center_front.x < 0 || new_center_front.x >= ROW || new_center_front.y < 0 || new_center_front.y >= COLUMN) {
-        // Do not update positions if any part is out of bounds
-        draw(*car,barriers,(moves){ROW-1,COLUMN-1});
-        return;
-    }
+        for (int i=0;i<3;i++)
+             direction_tried[i] = 0;
+        is_reversing = 0;
+           return;
+     }
+         is_reversing = 0;
+          for (int i=0;i<3;i++) direction_tried[i] = 0;
         // Update positions only if all are within bounds
         car->left_back.x = new_left_back.x;
         car->left_back.y = new_left_back.y;
@@ -139,7 +166,7 @@ void move_car(my_car *car, barrier barriers[], moves target) {
         car->center_back.x = new_center_back.x;
         car->center_back.y = new_center_back.y;
         car->center_front.x = new_center_front.x;
-        car->center_front.y = new_center_front.y;
+        car->center_front.y = new_center_front.y;   
     draw(*car,barriers,(moves){ROW-1,COLUMN-1});
 }
 
@@ -153,7 +180,7 @@ int main() {
     barrier barriers[NUM_BARRIERS];
     generate_barriers(barriers);
     draw(car,barriers,(moves){ROW-1,COLUMN-1});
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 300; i++) {
         move_car(&car, barriers,(moves){ROW-1,COLUMN-1}); 
     }
     return 0;
@@ -187,5 +214,5 @@ void draw(my_car car, barrier barriers[],moves target){
     }
     printf("\n");
     fflush(stdout);
-    sleep(1);
+    usleep(100000);
 }
