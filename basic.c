@@ -4,10 +4,20 @@
 #include <stdlib.h>
 
 int main(){
-    for (int i = 0; i < 100; i++) {
-        printf("%d\n", i + 1);
+    for (int i = 0; i < 4; i++){
+        for (int j = 0; j < 4; j++){
+            if (i == 0 || i == 3){
+                printf("*");
+            } else {
+                if (j == 0 || j == 3){
+                    printf("*");
+                } else {
+                    printf(" ");
+                }
+            }
+        }
+        printf("\n");
     }
-    return 0;
 }
 
 int flag () {
