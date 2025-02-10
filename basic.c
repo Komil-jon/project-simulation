@@ -1,22 +1,51 @@
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:2005040696.
-// Suggested code may be subject to a license. Learn more: ~LicenseLog:2701344185.
 #include <stdio.h>
 #include <stdlib.h>
 
 int main(){
-    for (int i = 0; i < 4; i++){
-        for (int j = 0; j < 4; j++){
-            if (i == 0 || i == 3){
-                printf("*");
-            } else {
-                if (j == 0 || j == 3){
+
+    char option;
+    do {
+    printf("which loop do you want to use?\n");
+    scanf("%c", &option);
+    } while (!(option == 'f' || option == 'w' || option == 'd'));
+
+    if (option == 'f') {
+
+        for (int i = 0; i < 4; i++){
+            for (int j = 0; j < 4; j++){
+                if (i == 0 || i == 3){
                     printf("*");
                 } else {
-                    printf(" ");
+                    if (j == 0 || j == 3){
+                        printf("*");
+                    } else {
+                        printf(" ");
+                    }
                 }
             }
+            printf("\n");
         }
-        printf("\n");
+
+    } else if (option == 'w'){
+        int i = 0;
+        while (i < 4){
+            if (i == 0 || i == 3){
+                printf("****\n");
+            } else{
+                printf("*  *\n");
+            }
+            i++;
+        }
+    } else {
+        int i = 0;
+        do {
+            if (i == 0 || i == 3){
+                printf("****\n");
+            } else{
+                printf("*  *\n");
+            }
+            i++;
+        } while (i < 4);
     }
 }
 
